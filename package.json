@@ -1,0 +1,20 @@
+{
+  "name": "sso-bridge",
+  "version": "1.0.0",
+  "description": "Adonis-oriented SSO bridge toolkit for apps.pm2etml.ch",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "check": "node -e \"require('./src')\""
+  },
+  "keywords": [
+    "sso",
+    "bridge",
+    "express"
+  ],
+  "license": "MIT",
+  "dependencies": {},
+  "engines": {
+    "node": ">=18"
+  }
+}
