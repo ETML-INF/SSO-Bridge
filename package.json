@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Adonis-oriented SSO bridge toolkit for apps.pm2etml.ch",
   "main": "src/index.js",
+  "types": "src/index.d.ts",
   "type": "commonjs",
   "scripts": {
     "check": "node -e \"require('./src')\""
