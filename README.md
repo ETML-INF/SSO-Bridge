@@ -17,9 +17,9 @@ Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeu
 
 ## Installation
 
-1. Installez les dépendances du package dans votre projet :
+1. Installez le package dans votre projet :
    ```bash
-   npm install
+   npm install git+https://github.com/ETML-INF/SSO-Bridge.git
    ```
 2. Ajoutez les variables d'environnement dans `.env` :
    ```env
