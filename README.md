@@ -24,6 +24,7 @@ Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeu
    ```env
    API_KEY=YOUR_SSO_API_KEY
    SSO_PORTAL=https://your-sso-portal.example.com/auth/
+   APP_URL=http://localhost:3333
    ```
 
 ## Utilisation avec AdonisJS (v6+)
