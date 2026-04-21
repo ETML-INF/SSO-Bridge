@@ -29,7 +29,7 @@ Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeu
 
 ## Utilisation avec AdonisJS (v6+)
 
-### 1) Créer un service SSO Bridge
+### 1) Exemple de service SSO Bridge
 
 ```ts
 import ssoBridgePackage from 'sso-bridge'
@@ -65,7 +65,7 @@ export function createBridgeFromEnv(): SsoBridge {
 }
 ```
 
-### 2) Créer un controller SSO
+### 2) Exemple de controller SSO
 
 ```ts
 // app/controllers/sso_test_controller.ts
@@ -220,7 +220,7 @@ router.get("/sso/callback", [SsoTestController, "callback"]);
 router.get("/sso/logout", [SsoTestController, "logout"]);
 ```
 
-## Utilisation Générique (Tout Framework)
+## Exemple d'utilisation Générique (Tout Framework)
 
 ```js
 const { createSSOBridge } = require("sso-bridge");
