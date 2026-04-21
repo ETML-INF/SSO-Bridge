@@ -1,7 +1,6 @@
 # SSO Bridge
 
 ## Description
-
 Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeur agnostique au framework.
 
 ## Ce Que Vous Obtenez
