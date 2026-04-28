@@ -6,8 +6,13 @@ class SSOBridge {
       throw new Error("Missing required option: apiKey");
     }
 
+    const normalizedPortal = normalizeSsoPortal(options.ssoPortal);
+    if (!normalizedPortal) {
+      throw new Error("Missing required option: ssoPortal");
+    }
+
     this.apiKey = options.apiKey;
-    this.ssoPortal = options.ssoPortal || "https://apps.pm2etml.ch/auth/";
+    this.ssoPortal = normalizedPortal;
   }
 
   buildUrl(pathname, params = {}) {
@@ -100,6 +105,16 @@ class SSOBridge {
 
     return this.buildUrl("bridge/logout", { redirectUri: redirectUrl }).toString();
   }
+}
+
+function normalizeSsoPortal(raw) {
+  const value = String(raw || "").trim();
+  if (!value) return "";
+
+  const withoutTrailingSlash = value.replace(/\/+$/, "");
+  const hasAuthSegment = /\/auth(?:\/|$)/.test(withoutTrailingSlash);
+  const base = hasAuthSegment ? withoutTrailingSlash : `${withoutTrailingSlash}/auth`;
+  return `${base}/`;
 }
 
 function createSSOBridge(options) {

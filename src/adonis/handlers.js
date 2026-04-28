@@ -85,7 +85,80 @@ function createAdonisSSOHandlers(bridge, options = {}) {
   };
 }
 
+/**
+ * Higher-level Adonis flow helper.
+ *
+ * Goal: keep app code minimal by moving the SSO plumbing here, while letting the app
+ * decide how to provision/find a user in its DB.
+ */
+function createAdonisSSOFlow(bridge, options = {}) {
+  const handlers = createAdonisSSOHandlers(bridge, options);
+
+  const sessionKey = options.sessionKey || "sso_bridge_correlation_id";
+  const loginPath = options.loginPath || "/sso/login";
+  const logoutPath = options.logoutPath || "/sso/logout";
+  const callbackPath = options.callbackPath || "/sso/callback";
+  const failureRedirect = options.failureRedirect || "/login";
+  const successRedirect = options.successRedirect || "/home";
+  const authGuard = options.authGuard || "web";
+
+  return {
+    /**
+     * GET status JSON with useful links.
+     */
+    status(ctx) {
+      return ctx.response.ok({
+        status: "ok",
+        links: {
+          login: buildAbsoluteUrl(ctx.request, loginPath),
+          callback: buildAbsoluteUrl(ctx.request, callbackPath, { correlationId: "XXX" }),
+          logout: buildAbsoluteUrl(ctx.request, logoutPath),
+        },
+      });
+    },
+
+    loginRedirect: handlers.loginRedirect,
+
+    /**
+     * Validates the SSO callback, provisions a user via the provided function, logs them in,
+     * then redirects.
+     */
+    async callbackLogin(ctx, findOrCreateUser) {
+      const correlationId = readSession(ctx.session, sessionKey);
+      const result = await bridge.retrieveLoginInfo(correlationId);
+
+      if (!result.isSuccess()) {
+        if (ctx.session && typeof ctx.session.flash === "function") {
+          ctx.session.flash({ error: result.error || "SSO error" });
+        }
+        return ctx.response.redirect(failureRedirect);
+      }
+
+      const user = await findOrCreateUser(result, ctx);
+      if (ctx.auth && typeof ctx.auth.use === "function") {
+        await ctx.auth.use(authGuard).login(user);
+      }
+
+      return ctx.response.redirect(successRedirect);
+    },
+
+    /**
+     * Logs out from the app (if ctx.auth exists) and redirects to SSO logout.
+     */
+    async logout(ctx) {
+      if (ctx.auth && typeof ctx.auth.use === "function") {
+        try {
+          await ctx.auth.use(authGuard).logout();
+        } catch (_e) {}
+      }
+
+      return handlers.logout(ctx);
+    },
+  };
+}
+
 module.exports = {
   createAdonisSSOHandlers,
+  createAdonisSSOFlow,
   buildAbsoluteUrl,
 };
