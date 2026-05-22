@@ -6,13 +6,8 @@ class SSOBridge {
       throw new Error("Missing required option: apiKey");
     }
 
-    const normalizedPortal = normalizeSsoPortal(options.ssoPortal);
-    if (!normalizedPortal) {
-      throw new Error("Missing required option: ssoPortal");
-    }
-
     this.apiKey = options.apiKey;
-    this.ssoPortal = normalizedPortal;
+    this.ssoPortal = options.ssoPortal || "https://apps.pm2etml.ch/auth/";
   }
 
   buildUrl(pathname, params = {}) {
@@ -85,16 +80,35 @@ class SSOBridge {
 
       const payload = await response.json();
       if (payload && payload.error) {
-        result.error = String(payload.error);
-        return result;
+        return {
+          ...payload,
+          email: String(payload.email || ""),
+          username: String(payload.username || ""),
+          error: String(payload.error),
+          isSuccess() {
+            return this.error === "";
+          },
+        };
       }
 
-      result.username = String((payload && payload.username) || "");
-      result.email = String((payload && payload.email) || "");
-      return result;
+      return {
+        ...payload,
+        email: String((payload && payload.email) || ""),
+        username: String((payload && payload.username) || ""),
+        error: "",
+        isSuccess() {
+          return this.error === "";
+        },
+      };
     } catch (_error) {
-      result.error = `Cannot GET ${url.toString()} (network or parsing issue)`;
-      return result;
+      return {
+        email: "",
+        username: "",
+        error: `Cannot GET ${url.toString()} (network or parsing issue)`,
+        isSuccess() {
+          return this.error === "";
+        },
+      };
     }
   }
 
@@ -105,16 +119,6 @@ class SSOBridge {
 
     return this.buildUrl("bridge/logout", { redirectUri: redirectUrl }).toString();
   }
-}
-
-function normalizeSsoPortal(raw) {
-  const value = String(raw || "").trim();
-  if (!value) return "";
-
-  const withoutTrailingSlash = value.replace(/\/+$/, "");
-  const hasAuthSegment = /\/auth(?:\/|$)/.test(withoutTrailingSlash);
-  const base = hasAuthSegment ? withoutTrailingSlash : `${withoutTrailingSlash}/auth`;
-  return `${base}/`;
 }
 
 function createSSOBridge(options) {
