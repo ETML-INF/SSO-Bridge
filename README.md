@@ -17,57 +17,198 @@ Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeu
 	 npm install
 2. Ajoutez les variables d'environnement:
 	 API_KEY=YOUR_SSO_API_KEY
-	 SSO_PORTAL=https://apps.pm2etml.ch/auth/
+	 SSO_PORTAL=https://your-sso-portal.example.com/auth/
 
 ## Utilisation Adonis
 
 ### 1) Creer un service bridge
 ```js
-// app/services/sso_bridge_service.js
-const { createSSOBridge } = require("sso-bridge")
+// On définit l'interface pour avoir l'autocomplétion et éviter les erreurs
+interface SsoBridge {
+  generateCorrelationId(): Promise<string>
+  buildLoginRedirectUrl(correlationId: string, callbackUrl: string): string
+  buildLogoutRedirectUrl(redirectUrl: string): string
+  retrieveLoginInfo(correlationId: string): Promise<{
+    email: string
+    username: string
+    error?: string
+    isSuccess: () => boolean
+  }>
+}
 
-const bridge = createSSOBridge({
-	apiKey: process.env.API_KEY,
-	ssoPortal: process.env.SSO_PORTAL,
-})
+/**
+ * Initialise le bridge avec les clés du .env
+ */
+export function createBridgeFromEnv(): SsoBridge {
+  const apiKey = env.get('API_KEY') // Ta clé secrète pour parler au bridge
+  const ssoPortal = normalizeSsoPortal(env.get('SSO_PORTAL'))
 
-module.exports = bridge
+  if (!apiKey) {
+    throw new Error('API_KEY (Bridge Token) manquante dans le .env')
+  }
+
+  if (!ssoPortal) {
+    throw new Error('SSO_PORTAL manquante dans le .env')
+  }
+
+  return ssoBridgePackage.createSSOBridge({
+    apiKey: apiKey,
+    ssoPortal: ssoPortal,
+  })
+}
+
+function normalizeSsoPortal(raw?: string) {
+  if (!raw) return undefined
+
+  const trimmed = String(raw).trim()
+  if (!trimmed) return undefined
+
+  const withoutTrailingSlash = trimmed.replace(/\/+$/, '')
+  const hasAuthSegment = /\/auth(?:\/|$)/.test(withoutTrailingSlash)
+  const base = hasAuthSegment ? withoutTrailingSlash : `${withoutTrailingSlash}/auth`
+  return `${base}/`
+}
+
+export function createAdonisSsoFlowFromEnv(options: any = {}) {
+  const bridge = createBridgeFromEnv() as any
+  const config = {
+    callbackPath: '/sso/callback',
+    afterLogoutPath: '/',
+    loginPath: '/sso/login',
+    logoutPath: '/sso/logout',
+    successRedirect: '/home',
+    failureRedirect: '/login',
+    authGuard: 'web',
+    ...options,
+  }
+
+  return {
+    async status(ctx: any) {
+      return ctx.response.send({
+        ok: true,
+        loginPath: config.loginPath,
+        callbackPath: config.callbackPath,
+        logoutPath: config.logoutPath,
+        successRedirect: config.successRedirect,
+        failureRedirect: config.failureRedirect,
+        authGuard: config.authGuard,
+      })
+    },
+
+    async loginRedirect({ response, request, session }: any) {
+      const correlationId = await bridge.generateCorrelationId()
+      writeSession(session, 'sso_bridge_correlation_id', correlationId)
+
+      const callbackUrl = buildAbsoluteUrl(request, config.callbackPath)
+      const redirectUrl = bridge.buildLoginRedirectUrl(correlationId, callbackUrl)
+
+      return response.redirect(redirectUrl)
+    },
+
+    async callbackLogin(ctx: any, createUser: (payload: any) => Promise<any>) {
+      const correlationId = readSession(ctx.session, 'sso_bridge_correlation_id')
+      const ssoResult = await bridge.retrieveLoginInfo(correlationId)
+      const payload = {
+        ...ssoResult,
+        correlationId,
+        raw: ssoResult,
+      }
+
+      if (!ssoResult.isSuccess()) {
+        return ctx.response.redirect(config.failureRedirect)
+      }
+
+      const user = await createUser(payload)
+      await ctx.auth.use(config.authGuard).login(user)
+
+      return ctx.response.redirect(config.successRedirect)
+    },
+
+    async logout({ auth, response, request }: any) {
+      await auth.use(config.authGuard).logout()
+
+      const redirectUrl = buildAbsoluteUrl(request, config.afterLogoutPath)
+      return response.redirect(bridge.buildLogoutRedirectUrl(redirectUrl))
+    },
+  }
+}
+
+function readSession(session: any, key: string) {
+  if (typeof session?.get === 'function') {
+    return session.get(key)
+  }
+
+  return undefined
+}
+
+function writeSession(session: any, key: string, value: string) {
+  if (typeof session?.put === 'function') {
+    session.put(key, value)
+    return
+  }
+
+  if (typeof session?.set === 'function') {
+    session.set(key, value)
+  }
+}
+
+function buildAbsoluteUrl(request: any, path: string) {
+  const protocol = typeof request?.protocol === 'function' ? request.protocol() : 'http'
+  const host = typeof request?.host === 'function' ? request.host() : 'localhost'
+  return new URL(`${protocol}://${host}${path}`).toString()
+}
+
 ```
 
 ### 2) Creer un controller
 ```js
-// app/controllers/sso_controller.js
-const bridge = require("../services/sso_bridge_service")
-const { createAdonisSSOHandlers } = require("sso-bridge")
-
-const handlers = createAdonisSSOHandlers(bridge, {
-	sessionKey: "sso_bridge_correlation_id",
-	callbackPath: "/sso/callback",
-	afterLogoutPath: "/",
-})
-
-class SsoController {
-	async loginRedirect(ctx) {
-		// Parametres passthrough optionnels disponibles dans la query string du callback.
-		return handlers.loginRedirect(ctx, { homepage: "home" })
-	}
-
-	async callback(ctx) {
-		const result = await handlers.callback(ctx)
-		if (result && result.error) {
-			return result
-		}
-
-		// TODO: mapper result.email / result.username sur votre utilisateur local et le connecter.
-		return ctx.response.send({ success: true, user: result })
-	}
-
-	logout(ctx) {
-		return handlers.logout(ctx)
-	}
+type SsoResult = {
+  email: string
+  username: string
+  error?: string
+  isSuccess: () => boolean
+  correlationId?: string
+  raw?: {
+    roles?: string | string[]
+    [key: string]: unknown
+  }
 }
 
-module.exports = SsoController
+export default class SsoTestController {
+  private flow() {
+    return createAdonisSsoFlowFromEnv()
+  }
+
+  /**
+   * Route de test SSO : GET /sso/test
+   * Affiche un état simple et les liens SSO utiles.
+   */
+  public async status(ctx: HttpContext) {
+    return this.flow().status(ctx as any)
+  }
+
+  /**
+   * PHASE 1 : Redirection vers le portail SSO
+   */
+  public async loginRedirect({ response, request, session }: HttpContext) {
+    return this.flow().loginRedirect({ response, request, session } as any)
+  }
+
+  /**
+   * PHASE 2 : Retour du portail SSO & Validation
+   */
+  public async callback(ctx: HttpContext) {
+    return this.flow().callbackLogin(ctx as any, (payload: SsoResult) =>
+      this.findOrCreateSsoUser(payload)
+    )
+  }
+
+  /**
+   * PHASE 3 : Déconnexion (Locale + Portail)
+   */
+  public async logout({ auth, response, request, session }: HttpContext) {
+    return this.flow().logout({ auth, response, request, session } as any)
+  }
 ```
 
 ### 3) Definir les routes
