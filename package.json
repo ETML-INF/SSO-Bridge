@@ -1,7 +1,7 @@
 {
-  "name": "sso-bridge",
-  "version": "1.0.1",
-  "description": "Adonis-oriented SSO bridge toolkit for apps.pm2etml.ch",
+  "name": "edu-sso-bridge",
+  "version": "1.0.2",
+  "description": "Adonis-oriented SSO bridge toolkit for adonisjs projects",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "commonjs",
@@ -11,7 +11,7 @@
   "keywords": [
     "sso",
     "bridge",
-    "express"
+    "adonisjs"
   ],
   "license": "MIT",
   "dependencies": {},
