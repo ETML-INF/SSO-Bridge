@@ -1,16 +1,32 @@
 # SSO Bridge
 
 ## Description
-Ce package fournit des helpers SSO orientés AdonisJS tout en conservant un coeur agnostique au framework.
+Ce package fournit des helpers SSO orientés framework et un starter interactif qui te propose un template au moment du `npm i`.
+
+## Démarrage rapide
+Quand tu installes le package directement avec `npm i edu-sso-bridge`, un wizard peut te demander quel framework tu veux générer. Le starter écrit seulement les fichiers manquants pour éviter d'écraser un projet existant.
+
+Si l'installation est non interactive, lance manuellement le starter avec:
+```bash
+npx sso-bridge-init
+```
 
 ## Ce Que Vous Obtenez
 - Un coeur SSO agnostique au framework (`src/core/sso-bridge.js`) pour generer des correlation IDs, construire les URLs de redirection SSO, verifier les resultats de callback et construire les URLs de logout.
 - Une couche d'integration Adonis (`src/adonis/handlers.js`) avec des handlers prets a l'emploi pour login redirect, callback et logout.
 - Des exports CommonJS via `src/index.js`.
+- Un starter interactif pour AdonisJS, Express, Fastify, NestJS et Koa.
 
 ## Compatibilite Framework
 - AdonisJS: couche de helpers native incluse.
 - Autres frameworks Node.js (Express, Fastify, NestJS, Koa): utilisez directement la classe core et branchez-la sur vos routes et votre systeme de session.
+
+## Frameworks supportes par le starter
+- AdonisJS
+- Express
+- Fastify
+- NestJS
+- Koa
 
 ## Installation
 1. Installez les dependances du package dans votre projet:

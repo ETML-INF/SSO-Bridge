@@ -1,17 +1,28 @@
 {
   "name": "edu-sso-bridge",
   "version": "1.0.3",
-  "description": "Adonis-oriented SSO bridge toolkit for adonisjs projects",
+  "description": "SSO bridge toolkit with an interactive starter generator for multiple frameworks",
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "commonjs",
+  "bin": {
+    "sso-bridge-init": "./scripts/init.js"
+  },
   "scripts": {
-    "check": "node -e \"require('./src')\""
+    "check": "node -e \"require('./src')\"",
+    "postinstall": "node ./scripts/postinstall.js",
+    "init": "node ./scripts/init.js"
   },
   "keywords": [
     "sso",
     "bridge",
-    "adonisjs"
+    "adonisjs",
+    "starter",
+    "scaffold",
+    "express",
+    "fastify",
+    "nest",
+    "koa"
   ],
   "license": "MIT",
   "dependencies": {},
